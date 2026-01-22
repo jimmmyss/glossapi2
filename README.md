@@ -9,6 +9,8 @@ https://www.paddlepaddle.org.cn/en/install/quick?docurl=undefined
 ```
 # For CPU
 python -m pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+python -m pip install -U "paddleocr[doc-parser]"
+python -m pip install safetensors
 # For GPU
 python -m pip install paddlepaddle-gpu==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
 python -m pip install -U "paddleocr[doc-parser]"
