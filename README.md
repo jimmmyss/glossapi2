@@ -11,6 +11,11 @@ python -m pip install -U "paddleocr[doc-parser]"
 python -m pip install https://paddle-whl.bj.bcebos.com/nightly/cu126/safetensors/safetensors-0.6.2.dev0-cp38-abi3-linux_x86_64.whl
 ```
 
+# PDFplumber requirements
+```
+pip install pdfplumber
+```
+
 # Label_list
 - abstract
 - algorithm
