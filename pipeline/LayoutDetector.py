@@ -1,5 +1,6 @@
-# Can be deleted later with save_to_img def 
 import os
+import json
+import pdfplumber
 from paddleocr import LayoutDetection
 
 class LayoutDetector:
@@ -11,51 +12,56 @@ class LayoutDetector:
         else:
             self.unwanted_labels = unwanted_labels
 
-        # Safety for images, can be deleted later with save_to_img def
-        self.output = None
+        self.filtered_results = None
 
-    def detect(self, input_path, pdf):
-        self.output = self.model.predict(input_path, batch_size=1, layout_nms=True)
+    def detect(self, input_path):
+        output = self.model.predict(input_path, batch_size=4, layout_nms=True)
         filtered_output = []
 
-        for i, res in enumerate(self.output):
-            page_json = res.json
-            pdf_page = pdf.pages[i]
-            
-            # 1. Get dimensions for the current page
-            img_h, img_w = res["input_img"].shape[:2]
-            pdf_w, pdf_h = pdf_page.width, pdf_page.height
-            
-            # 2. Add resolution info to the 'res' block
-            page_json["res"]["image_size"] = [img_w, img_h]
-            page_json["res"]["pdf_size"] = [float(pdf_w), float(pdf_h)]
-            
-            # 3. Calculate ratios
-            x_scale = pdf_w / img_w
-            y_scale = pdf_h / img_h
+        with pdfplumber.open(input_path) as pdf:
+            for i, res in enumerate(output):
+                page_json = res.json
+                pdf_page = pdf.pages[i]
+                
+                raw_boxes = page_json["res"].pop("boxes", [])
+                
+                img_h, img_w = res["input_img"].shape[:2]
 
-            # 4. Filter and Calculate Box Math
-            final_boxes = []
-            for box_obj in page_json["res"]["boxes"]:
-                if box_obj["label"] not in self.unwanted_labels and box_obj["score"] >= self.threshold:
-                    coords = box_obj.get("coordinate")
-                    pdf_bbox = [coords[0] * x_scale, coords[1] * y_scale, coords[2] * x_scale, coords[3] * y_scale]
-                    new_box = {"pdf_bbox": pdf_bbox, "box": coords, "label": box_obj["label"], "score": box_obj["score"], "cls_id": box_obj.get("cls_id")}
+                pdf_w, pdf_h = pdf_page.width, pdf_page.height
+                
+                page_json["res"]["image_size"] = [img_w, img_h]
+                page_json["res"]["pdf_size"] = [float(pdf_w), float(pdf_h)]
+                
+                x_scale, y_scale = pdf_w / img_w, pdf_h / img_h
 
-                    final_boxes.append(new_box)
+                processed_boxes = []
+                for box_obj in raw_boxes:
+                    if box_obj["label"] not in self.unwanted_labels and box_obj["score"] >= self.threshold:
+                        coords = box_obj["coordinate"]
+                        pdf_bbox = [coords[0] * x_scale, coords[1] * y_scale, coords[2] * x_scale, coords[3] * y_scale]
+                        processed_boxes.append({"pdf_bbox": pdf_bbox, "box": coords, "label": box_obj["label"], "score": box_obj["score"], "cls_id": box_obj["cls_id"]})
 
-            page_json["res"]["boxes"] = final_boxes
-            filtered_output.append(page_json)   
+                page_json["res"]["boxes"] = processed_boxes
+                filtered_output.append(page_json)   
 
+        self.filtered_results = filtered_output
+        self.output = output
         return filtered_output
 
-    # For visual debugging, can delete later
-    def save_to_img(self, output_path):
+    # For visual debugging
+    def save_results(self, output_path):
         if self.output is None:
             return
 
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
+        os.makedirs(output_path, exist_ok=True)
         
+        # Save visual images 
         for res in self.output:
             res.save_to_img(save_path=output_path)
+            
+        # Save JSON with coordinates
+        json_path = os.path.join(output_path, "filtered_results.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(self.filtered_results, f, ensure_ascii=False, indent=4)
+        
+        self.output = None
