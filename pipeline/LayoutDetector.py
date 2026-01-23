@@ -14,24 +14,37 @@ class LayoutDetector:
         # Safety for images, can be deleted later with save_to_img def
         self.output = None
 
-    def detect(self, input_path):
+    def detect(self, input_path, pdf):
         self.output = self.model.predict(input_path, batch_size=1, layout_nms=True)
         filtered_output = []
 
-        for res in self.output:
+        for i, res in enumerate(self.output):
             page_json = res.json
+            pdf_page = pdf.pages[i]
             
-            # Extract per-page dimensions for text layer coordination
+            # 1. Get dimensions for the current page
             img_h, img_w = res["input_img"].shape[:2]
-            page_json["res"]["img_w"] = img_w
-            page_json["res"]["img_h"] = img_h
+            pdf_w, pdf_h = pdf_page.width, pdf_page.height
             
-            # Filter out unwanted labels and low confidence boxes
-            page_json["res"]["boxes"] = [
-                box for box in page_json["res"]["boxes"] 
-                if box["label"] not in self.unwanted_labels and box["score"] >= self.threshold
-            ]
+            # 2. Add resolution info to the 'res' block
+            page_json["res"]["image_size"] = [img_w, img_h]
+            page_json["res"]["pdf_size"] = [float(pdf_w), float(pdf_h)]
+            
+            # 3. Calculate ratios
+            x_scale = pdf_w / img_w
+            y_scale = pdf_h / img_h
 
+            # 4. Filter and Calculate Box Math
+            final_boxes = []
+            for box_obj in page_json["res"]["boxes"]:
+                if box_obj["label"] not in self.unwanted_labels and box_obj["score"] >= self.threshold:
+                    coords = box_obj.get("coordinate")
+                    pdf_bbox = [coords[0] * x_scale, coords[1] * y_scale, coords[2] * x_scale, coords[3] * y_scale]
+                    new_box = {"pdf_bbox": pdf_bbox, "box": coords, "label": box_obj["label"], "score": box_obj["score"], "cls_id": box_obj.get("cls_id")}
+
+                    final_boxes.append(new_box)
+
+            page_json["res"]["boxes"] = final_boxes
             filtered_output.append(page_json)   
 
         return filtered_output
@@ -46,4 +59,3 @@ class LayoutDetector:
         
         for res in self.output:
             res.save_to_img(save_path=output_path)
-    
