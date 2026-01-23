@@ -21,6 +21,18 @@ python -m pip install https://paddle-whl.bj.bcebos.com/nightly/cu126/safetensors
 ```
 pip install pdfplumber
 ```
+# Tables?
+TableFormer
+Camelot
+PDFPlubmber
+Tabula
+
+PIPELINE????
+Layout Analysis → Identifies table bounding boxes ✓ (You have this)
+pdfplumber → Extracts text with precise positioning from table region
+TableFormer → Determines structure (rows, columns, merged cells) using vision
+Combine → Match pdfplumber text to TableFormer structure
+Export → Clean JSON output
 
 # Label_list
 - abstract
