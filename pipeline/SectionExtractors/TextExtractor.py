@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import pdfplumber
 
@@ -9,33 +10,33 @@ class TextExtract:
     def extract(self, input_path, results):
         final_output = []
 
+        # Only text, paragraph etc will go in fix later
         with pdfplumber.open(input_path) as pdf:
             for i, page_data in enumerate(results):
                 pdf_page = pdf.pages[i]
 
-                page_extractions = {"page": i + 1, "regions": []}
+                page_extractions = {"page": i, "regions": []}
 
-                # Get boxes from layout detection results
                 boxes = page_data["res"]["boxes"]
 
                 for box_obj in boxes:
-                    # Use pre-calculated PDF coordinates from LayoutDetector
                     pdf_bbox = box_obj.get("pdf_bbox")
-                    if not pdf_bbox:
+                    if not pdf_bbox or pdf_bbox[0] >= pdf_bbox[2] or pdf_bbox[1] >= pdf_bbox[3]:
                         continue
 
                     try:
-                        cropped = pdf_page.crop(pdf_bbox, strict=False)
-                        text = cropped.extract_text(x_tolerance=1.5, y_tolerance=1.5)
+                        text = pdf_page.crop(pdf_bbox, strict=False).extract_text(x_tolerance_ratio=0.09) # Sweet spot for typography standards for word spacing
 
                         if text and text.strip():
+                            #text = re.sub(r'-\s+([a-z])', r'\1', text) # Remove hyphenated words only if followed by whitespace AND lowercase letter(exam- ple -> example)
+                            #text = " ".join(text.split()) # Remove whitespaces and newlines
                             page_extractions["regions"].append({
                                 "label": box_obj.get("label"),
                                 "confidence": box_obj.get("score"),
-                                "text": text.strip()
+                                "text": text
                             })
+
                     except Exception as e:
-                        print(f"Warning: Could not extract text for box {pdf_bbox} on page {i+1}: {e}")
                         continue
 
                 final_output.append(page_extractions)
