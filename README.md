@@ -23,9 +23,13 @@ pip install pdfplumber
 ```
 # Tables?
 TableFormer
-Camelot
+TATR
+RAPTOR(https://arxiv.org/html/2502.14918v2)
+
+Old options (BAD)
 PDFPlubmber
 Tabula
+Camelot
 
 ```
 PIPELINE????
