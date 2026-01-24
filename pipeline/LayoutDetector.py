@@ -3,7 +3,7 @@ import json
 import pdfplumber
 from paddleocr import LayoutDetection
 
-class LayoutDetector:
+class LayoutDetect:
     def __init__(self, model = "PP-DocLayoutV2", threshold = 0.65, unwanted_labels = None):
         self.model = LayoutDetection(model_name=model)
         self.threshold = threshold
