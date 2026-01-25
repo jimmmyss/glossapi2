@@ -53,6 +53,7 @@ class LayoutDetect:
                 detection_coordinates.append(page_json)   
 
         self.detection_coordinates = detection_coordinates
+        self.model_output = output
         return detection_coordinates
 
     def split(self, detection_coordinates=None):
@@ -113,7 +114,11 @@ class LayoutDetect:
         # Get PDF name from input_path in detection results
         input_path = self.detection_coordinates[0].get("input_path", "output")
         pdf_name = os.path.splitext(os.path.basename(input_path))[0]
-            
+        
+        # Save the photos
+        for res in self.model_output:
+            res.save_to_img(save_path=output_path)
+
         # Save detection results JSON
         detection_path = os.path.join(output_path, f"{pdf_name}_detection_coordinates.json")
         with open(detection_path, "w", encoding="utf-8") as f:
