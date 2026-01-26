@@ -13,4 +13,3 @@ class Analyze:
 
     def has_alligned_text_layer(self, input_path, layout_coordinates):
         return True
-    

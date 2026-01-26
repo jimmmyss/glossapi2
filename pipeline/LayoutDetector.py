@@ -8,7 +8,7 @@ class LayoutDetect:
     TABLE_LABELS = {"table"}
     MATH_LABELS = {"formula", "equation", "inline_formula", "displayed_formula"}
     UNWANTED_LABELS = {"aside_text", "header_image", "footer_image", "formula_number", "number", "seal", "image", "content", "footnote", "chart"}
-    THRESHOLD = 0.65
+    THRESHOLD = 0.5
     
     def __init__(self, model = "PP-DocLayoutV2"):
         self.model = LayoutDetection(model_name=model)
