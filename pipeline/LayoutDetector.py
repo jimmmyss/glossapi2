@@ -15,7 +15,7 @@ class LayoutDetect:
 
     def detect(self, input_path):
         output = self.model.predict(input_path, batch_size=4, layout_nms=True)
-        detection_coordinates = []
+        layout_coordinates = []
         self.input_path = input_path
 
         with pdfplumber.open(input_path) as pdf:
@@ -50,20 +50,20 @@ class LayoutDetect:
                 page_json["input_path"] = input_path
                 page_json["page_idx"] = i
                 page_json["res"]["boxes"] = processed_boxes
-                detection_coordinates.append(page_json)   
+                layout_coordinates.append(page_json)   
 
-        self.detection_coordinates = detection_coordinates
+        self.layout_coordinates = layout_coordinates
         self.model_output = output
-        return detection_coordinates
+        return layout_coordinates
 
-    def split(self, detection_coordinates=None):
-        detection_coordinates = self.detection_coordinates
+    def filter(self, layout_coordinates=None):
+        layout_coordinates = self.layout_coordinates
         
         text_coordinates = []
         table_coordinates = []
         math_coordinates = []
         
-        for page_data in detection_coordinates:
+        for page_data in layout_coordinates:
             page_info = {
                 "input_path": page_data.get("input_path"),
                 "page_idx": page_data.get("page_idx"),
@@ -106,13 +106,13 @@ class LayoutDetect:
 
     # For visual debugging
     def save_results(self, output_path):
-        if self.detection_coordinates is None:
+        if self.layout_coordinates is None:
             return
 
         os.makedirs(output_path, exist_ok=True)
         
         # Get PDF name from input_path in detection results
-        input_path = self.detection_coordinates[0].get("input_path", "output")
+        input_path = self.layout_coordinates[0].get("input_path", "output")
         pdf_name = os.path.splitext(os.path.basename(input_path))[0]
         
         # Save the photos
@@ -120,9 +120,9 @@ class LayoutDetect:
             res.save_to_img(save_path=output_path)
 
         # Save detection results JSON
-        detection_path = os.path.join(output_path, f"{pdf_name}_detection_coordinates.json")
+        detection_path = os.path.join(output_path, f"{pdf_name}_layout_coordinates.json")
         with open(detection_path, "w", encoding="utf-8") as f:
-            json.dump(self.detection_coordinates, f, ensure_ascii=False, indent=4)
+            json.dump(self.layout_coordinates, f, ensure_ascii=False, indent=4)
         
         # Save split results if available
         if self.text_coordinates is not None:

@@ -11,6 +11,6 @@ class Analyze:
                     return True
             return False
 
-    def has_alligned_text_layer(self, input_path):
+    def has_alligned_text_layer(self, input_path, layout_coordinates):
         return True
     
