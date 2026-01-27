@@ -6,7 +6,7 @@ from SectionExtractors.MathExtractor import MathExtract
 from SectionExtractors.VLMExtractor import VLMExtract
 
 def main():
-    input_path = "pdfs/9ΦΑ346ΜΔΨΟ-ΦΚΕ.pdf"
+    input_path = "pdfs/9ΩΙΝ46ΜΔΨΟ-154.pdf"
 
     analyzer = Analyze()
 
@@ -19,9 +19,13 @@ def main():
         # <section>_coordinates are never truly empty so create functions that check them
         if text_coordinates is not None:
             text_extractor = TextExtract()
-            text_extractor.extract(input_path, text_coordinates)
+            text_results, text_results_empty = text_extractor.extract(text_coordinates)
             text_extractor.save_results("output") # For visual debugging
-
+            # if text is empty then
+            vlm_extractor = VLMExtract()
+            vlm_extractor.coordinate_extraction(text_results_empty)
+            vlm_extractor.save_results("output") # For visual debugging
+    
         # if table_coordinates is not None:
         #     table_extractor = TableExtract()
         #     table_extractor.extract(input_path, table_coordinates)
