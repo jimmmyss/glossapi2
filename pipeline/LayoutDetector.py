@@ -1,6 +1,6 @@
 import os
 import json
-import pdfplumber
+import fitz
 from paddleocr import LayoutDetection
 
 class LayoutDetect:
@@ -10,47 +10,65 @@ class LayoutDetect:
     UNWANTED_LABELS = {"aside_text", "header_image", "footer_image", "formula_number", "number", "seal", "image", "content", "footnote", "chart"}
     THRESHOLD = 0.5
     
-    def __init__(self, model = "PP-DocLayoutV2"):
+    def __init__(self, model = "PP-DocLayoutV3"):
         self.model = LayoutDetection(model_name=model)
 
     def detect(self, input_path):
-        output = self.model.predict(input_path, batch_size=4, layout_nms=True)
+        output = self.model.predict(input_path, batch_size=4, layout_nms=True, threshold=0.2)
+
         layout_coordinates = []
         self.input_path = input_path
 
-        with pdfplumber.open(input_path) as pdf:
-            for i, res in enumerate(output):
-                page_json = res.json
-                pdf_page = pdf.pages[i]
-                
-                raw_boxes = page_json["res"].pop("boxes", [])
-                
-                img_h, img_w = res["input_img"].shape[:2]
+        doc = fitz.open(input_path)
 
-                pdf_w, pdf_h = pdf_page.width, pdf_page.height
-                
-                page_json["res"]["image_size"] = [img_w, img_h]
-                page_json["res"]["pdf_size"] = [float(pdf_w), float(pdf_h)]
-                
-                x_scale, y_scale = pdf_w / img_w, pdf_h / img_h
+        for i, res in enumerate(output):
+            page_json = res.json
+            page = doc[i]
+                    
+            # The model's raw detections (in pixels)
+            raw_boxes = page_json["res"].pop("boxes", [])
+                    
+            # Image dimensions (what the AI saw)
+            img_h, img_w = res["input_img"].shape[:2]
 
-                processed_boxes = []
-                for order_idx, box_obj in enumerate(raw_boxes):
-                    coords = box_obj["coordinate"]
-                    pdf_bbox = [coords[0] * x_scale, coords[1] * y_scale, coords[2] * x_scale, coords[3] * y_scale]
-                    processed_boxes.append({
-                        "order": order_idx,
-                        "pdf_bbox": pdf_bbox, 
-                        "box": coords, 
-                        "label": box_obj["label"], 
-                        "score": box_obj["score"], 
-                        "cls_id": box_obj["cls_id"]
-                    })
+            # PDF dimensions (the physical document size)
+            # page.rect is [x0, y0, x1, y1]
+            pdf_w = page.rect.width
+            pdf_h = page.rect.height
+                    
+            page_json["res"]["image_size"] = [img_w, img_h]
+            page_json["res"]["pdf_size"] = [float(pdf_w), float(pdf_h)]
+                    
+            # Calculate scale factors
+            x_scale, y_scale = pdf_w / img_w, pdf_h / img_h
 
-                page_json["input_path"] = input_path
-                page_json["page_idx"] = i
-                page_json["res"]["boxes"] = processed_boxes
-                layout_coordinates.append(page_json)   
+            processed_boxes = []
+            for order_idx, box_obj in enumerate(raw_boxes):
+                coords = box_obj["coordinate"] # [x1, y1, x2, y2]
+                        
+                # Scale coordinates to PDF points
+                pdf_bbox = [
+                    coords[0] * x_scale, 
+                    coords[1] * y_scale, 
+                    coords[2] * x_scale, 
+                    coords[3] * y_scale
+                ]
+                        
+                processed_boxes.append({
+                    "order": order_idx,
+                    "pdf_bbox": pdf_bbox, 
+                    "box": coords, 
+                    "label": box_obj["label"], 
+                    "score": box_obj["score"], 
+                    "cls_id": box_obj["cls_id"]
+                })
+
+            page_json["input_path"] = input_path
+            page_json["page_idx"] = i
+            page_json["res"]["boxes"] = processed_boxes
+            layout_coordinates.append(page_json)   
+
+        doc.close()
 
         self.layout_coordinates = layout_coordinates
         self.model_output = output
