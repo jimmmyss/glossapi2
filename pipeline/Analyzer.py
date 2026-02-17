@@ -1,13 +1,13 @@
-import pdfplumber
+import fitz
 
 class Analyze:
     def __init__(self):
         pass
 
     def has_text_layer(self, input_path):
-        with pdfplumber.open(input_path) as pdf:
-            for page in pdf.pages:
-                if len(page.chars) > 0:
+        with fitz.open(input_path) as pdf:
+            for page in pdf:
+                if page.get_text().strip():
                     return True
             return False
 
