@@ -1,61 +1,83 @@
 import os
 import json
-import pdf2image
+import pymupdf # PyMuPDF
+import tempfile
+import torch
+from transformers import AutoModel, AutoTokenizer
 
 class VLMExtract:
     def __init__(self):
         self.input_path = None
         self.cropped_images = None
 
-    def coordinate_extraction(self, empty_regions):
-        # Get input_path from the first page in empty_regions
+        model_name = 'deepseek-ai/DeepSeek-OCR-2' 
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True, use_safetensors=True)
+
+        self.dtype = torch.float16
+        if torch.cuda.is_available():
+            self.device = "cuda"
+            if torch.cuda.is_bf16_supported():
+                self.dtype = torch.bfloat16
+        else:
+            self.device = "cpu"
+
+        self.model = self.model.eval().to(self.device).to(self.dtype)
+
+        self.prompt = "<image>\n<|grounding|>Convert the document to markdown. "
+        # self.image_file = 'your_image.jpg'
+        # self.output_path = 'your/output/dir'        
+
+
+    def partial_extract(self, empty_regions):
+        from PIL import Image
+
         self.input_path = empty_regions[0]["input_path"]
-        
-        # Convert PDF pages to images
-        pdf_images = pdf2image.convert_from_path(self.input_path, dpi=250)
-        
+        doc = fitz.open(self.input_path)
+
+        dpi = 250
+        zoom = dpi / 72
+        mat = fitz.Matrix(zoom, zoom)
+
         cropped_images = []
         for page_data in empty_regions:
             page_idx = page_data["page"]
-            if page_idx >= len(pdf_images):
+            if page_idx >= len(doc):
                 continue
-            
-            page_image = pdf_images[page_idx]
-            actual_width, actual_height = page_image.size
-            
-            # Get original detection image size from JSON
-            orig_width, orig_height = page_data["image_size"]
-            
-            # Scale factors from detection image to pdf2image output
-            scale_x = actual_width / orig_width
-            scale_y = actual_height / orig_height
-            
+
+            page = doc[page_idx]
+
             page_crops = []
             for region in page_data["regions"]:
-                # Use box coordinates (from detection) and scale to actual image
-                box = region["box"]
-                x0, y0, x1, y1 = box
-                
-                x0 = int(x0 * scale_x)
-                y0 = int(y0 * scale_y)
-                x1 = int(x1 * scale_x)
-                y1 = int(y1 * scale_y)
-                
-                cropped = page_image.crop((x0, y0, x1, y1))
-                
+                # pdf_bbox is already in PDF points — matches PyMuPDF coordinates
+                x0, y0, x1, y1 = region["pdf_bbox"]
+                clip = fitz.Rect(x0, y0, x1, y1)
+
+                # Render only the clipped region at target DPI
+                pix = page.get_pixmap(matrix=mat, clip=clip)
+
+                # Convert pixmap to PIL Image
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
                 page_crops.append({
                     "order": region["order"],
                     "label": region["label"],
-                    "image": cropped
+                    "image": img
                 })
-            
+ 
             cropped_images.append({
                 "page": page_idx,
                 "crops": page_crops
             })
-        
+
+        doc.close()
         self.cropped_images = cropped_images
         return cropped_images
+
+    def full_extract(self):
+        pass
+
 
     def save_results(self, output_path):
         if not self.cropped_images:
@@ -79,3 +101,5 @@ class VLMExtract:
     # VLM
     def extract(self):
         pass
+
+        res = self.model.infer(self.tokenizer, prompt=self.prompt, image_file=self.image_file, output_path = self.output_path, base_size = 1024, image_size = 768, crop_mode = True, save_results = True, test_compress = True)
