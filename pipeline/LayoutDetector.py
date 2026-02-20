@@ -8,7 +8,6 @@ class LayoutDetect:
     TABLE_LABELS = {"table"}
     MATH_LABELS = {"formula", "equation", "inline_formula", "displayed_formula"}
     UNWANTED_LABELS = {"aside_text", "header_image", "footer_image", "formula_number", "number", "seal", "image", "content", "footnote", "chart"}
-    THRESHOLD = 0.5
     
     def __init__(self, model = "PP-DocLayoutV3"):
         self.model = LayoutDetection(model_name=model)
@@ -32,12 +31,8 @@ class LayoutDetect:
             img_h, img_w = res["input_img"].shape[:2]
 
             # PDF dimensions (the physical document size)
-            # page.rect is [x0, y0, x1, y1]
             pdf_w = page.rect.width
             pdf_h = page.rect.height
-                    
-            page_json["res"]["image_size"] = [img_w, img_h]
-            page_json["res"]["pdf_size"] = [float(pdf_w), float(pdf_h)]
                     
             # Calculate scale factors
             x_scale, y_scale = pdf_w / img_w, pdf_h / img_h
@@ -63,10 +58,13 @@ class LayoutDetect:
                     "cls_id": box_obj["cls_id"]
                 })
 
-            page_json["input_path"] = input_path
-            page_json["page_idx"] = i
-            page_json["res"]["boxes"] = processed_boxes
-            layout_coordinates.append(page_json)   
+            layout_coordinates.append({
+                "input_path": input_path,
+                "page_idx": i,
+                "image_size": [img_w, img_h],
+                "pdf_size": [float(pdf_w), float(pdf_h)],
+                "boxes": processed_boxes
+            })   
 
         doc.close()
 
@@ -82,39 +80,39 @@ class LayoutDetect:
         math_coordinates = []
         
         for page_data in layout_coordinates:
-            page_info = {
+            page_base = {
                 "input_path": page_data.get("input_path"),
                 "page_idx": page_data.get("page_idx"),
-                "res": {
-                    "image_size": page_data["res"].get("image_size"),
-                    "pdf_size": page_data["res"].get("pdf_size"),
-                    "boxes": []
-                }
+                "image_size": page_data.get("image_size"),
+                "pdf_size": page_data.get("pdf_size"),
             }
             
-            text_page = {**page_info, "res": {**page_info["res"], "boxes": []}}
-            table_page = {**page_info, "res": {**page_info["res"], "boxes": []}}
-            math_page = {**page_info, "res": {**page_info["res"], "boxes": []}}
+            text_page = {**page_base, "boxes": []}
+            table_page = {**page_base, "boxes": []}
+            math_page = {**page_base, "boxes": []}
             
-            for box in page_data["res"].get("boxes", []):
+            for box in page_data.get("boxes", []):
                 label = box["label"]
-                score = box["score"]
                 
-                # Skip low confidence and unwanted labels
-                if score < self.THRESHOLD or label in self.UNWANTED_LABELS:
+                # Skip unwanted labels
+                if label in self.UNWANTED_LABELS:
                     continue
                 
                 # Categorize by label type
                 if label in self.TEXT_LABELS:
-                    text_page["res"]["boxes"].append(box)
+                    text_page["boxes"].append(box)
                 elif label in self.TABLE_LABELS:
-                    table_page["res"]["boxes"].append(box)
+                    table_page["boxes"].append(box)
                 elif label in self.MATH_LABELS:
-                    math_page["res"]["boxes"].append(box)
+                    math_page["boxes"].append(box)
             
-            text_coordinates.append(text_page)
-            table_coordinates.append(table_page)
-            math_coordinates.append(math_page)
+            # Only include pages that have detections
+            if text_page["boxes"]:
+                text_coordinates.append(text_page)
+            if table_page["boxes"]:
+                table_coordinates.append(table_page)
+            if math_page["boxes"]:
+                math_coordinates.append(math_page)
         
         self.text_coordinates = text_coordinates
         self.table_coordinates = table_coordinates

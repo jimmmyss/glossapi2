@@ -1,9 +1,6 @@
 from Analyzer import Analyze
 from LayoutDetector import LayoutDetect
-from SectionExtractors.TextExtractor import TextExtract
-from SectionExtractors.TableExtractor import TableExtract
-from SectionExtractors.MathExtractor import MathExtract
-from SectionExtractors.VLMExtractor import VLMExtract
+from SectionExtractor import TextExtract, TableExtract, MathExtract, VLMExtract
 
 def main():
     input_path = "pdfs/test2.pdf"
@@ -26,10 +23,10 @@ def main():
             # vlm_extractor.coordinate_extraction(text_results_empty)
             # vlm_extractor.save_results("output") # For visual debugging
     
-        # if table_coordinates is not None:
-        #     table_extractor = TableExtract()
-        #     table_extractor.extract(input_path, table_coordinates)
-        #     table_extractor.save_results("output") # For visual debugging
+        if table_coordinates is not None:
+            table_extractor = TableExtract()
+            table_extractor.extract(table_coordinates)
+            table_extractor.save_results("output") # For visual debugging
 
         # if math_coordinates is not None:
         #     math_extractor = MathExtract()

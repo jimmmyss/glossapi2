@@ -5,8 +5,12 @@ The following folders contain files that are not a part of the pipeline, the out
 ```
 pipeline/
 ├── output/
-│   ├── extracted_text.json/
-│   ├── filtered_results.json/
+│   ├── <name>_layout_coordinates.json/
+|   ├── <name>_text_coordinates.json/
+|   ├── <name>_table_coordinates.json/
+|   ├── <name>_math_coordinates.json/
+|   ├── <name>_text_empty_coordinates.json/
+|   ├── <name>_text_results.json/
 │   └── <name>_<page>_res.png/
 └── pdfs/
 ```
