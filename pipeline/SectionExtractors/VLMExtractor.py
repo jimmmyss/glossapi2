@@ -3,6 +3,7 @@ import json
 import pymupdf # PyMuPDF
 import tempfile
 import torch
+from PIL import Image
 from transformers import AutoModel, AutoTokenizer
 
 class VLMExtract:
@@ -31,7 +32,6 @@ class VLMExtract:
 
 
     def partial_extract(self, empty_regions):
-        from PIL import Image
 
         self.input_path = empty_regions[0]["input_path"]
         doc = fitz.open(self.input_path)
@@ -101,5 +101,6 @@ class VLMExtract:
     # VLM
     def extract(self):
         pass
+
 
         res = self.model.infer(self.tokenizer, prompt=self.prompt, image_file=self.image_file, output_path = self.output_path, base_size = 1024, image_size = 768, crop_mode = True, save_results = True, test_compress = True)

@@ -6,7 +6,7 @@ from SectionExtractors.MathExtractor import MathExtract
 from SectionExtractors.VLMExtractor import VLMExtract
 
 def main():
-    input_path = "pdfs/ΡΠΣ246ΜΔΨΟ-ΥΕ8.pdf"
+    input_path = "pdfs/test2.pdf"
 
     analyzer = Analyze()
 
