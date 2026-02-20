@@ -1,7 +1,7 @@
-# Current models and tools
+# Current Models and Tools
 
-Layout -> PP-DocLayoutV3
-Text -> PyMuPDF
-Tables -> ?Table Transformer?
-Math -> PP-FormulaNet_plus-L
-VLM -> DeepSeek-OCR-2
+- **Layout** → PP-DocLayoutV3  
+- **Text** → PyMuPDF  
+- **Tables** → ?Table Transformer?  
+- **Math** → PP-FormulaNet_plus-L  
+- **VLM** → DeepSeek-OCR-2  
