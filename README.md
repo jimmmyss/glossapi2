@@ -3,7 +3,7 @@
 - **Layout** → PP-DocLayoutV3  
 - **Text** → PyMuPDF  
 - **Tables** → ?Table Transformer?, ??SLANet?? 
-- **Math** → PP-FormulaNet_plus-L  
+- **Math** → PP-FormulaNet_plus-L, ?UniMERNet?
 - **VLM** → DeepSeek-OCR-2  
 
 # Progress
